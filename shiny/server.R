@@ -51,30 +51,36 @@ relevantShapes <- spTransform(relevantShapes, CRS("+proj=longlat +datum=WGS84"))
 shinyServer(function(input, output) {
 
   output$taxMap <- renderPlot({
+        # Map names of tax categories to those used in the data files:
         if (input$taxCategory == "Single")
               taxCategory <- "GT"
         else
               taxCategory <- "VT"        
         
+        # Calculate tax for each zip code:
         incomeTax <- calculateTax(relevantShapes$PLZ, input$income, "income", taxCategory, taxScales, taxMultipliers, gisData)
-        wealthTax <- calculateTax(relevantShapes$PLZ, input$wealth, "wealth", taxCategory, taxScales, taxMultipliers, gisData)
+        wealthTax <- calculateTax(relevantShapes$PLZ, input$wealth, "wealth", taxCategory, taxScales, taxMultipliers, gisData)        
         relevantShapes$tax <- incomeTax + wealthTax
+        
+        # To allow joining of shape data and tax data, we need row IDs in the shape data:
         relevantShapes@data$id <- rownames(relevantShapes@data)
         
         # Convert to dataframe for plotting with ggplot - takes a while
         relevantShapes.df <- fortify(relevantShapes)
         
-        # Merge tax data into shape dataframe. Hint: http://stackoverflow.com/questions/19791210/r-ggplot2-merge-with-shapefile-and-csv-data-to-fill-polygons
+        # Merge tax data into shape dataframe:
         relevantShapes.df <- inner_join(relevantShapes.df, relevantShapes@data, by="id")
         
-        # Plot with ggplot
+        # Plot with ggplot:
         centerOfMap <- geocode("47.436734,8.6513793", source = "google")
         googleMap <- get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = "terrain", source = "google")
         
-        ggmap(googleMap) + 
+        finalMap <- ggmap(googleMap) + 
               geom_polygon(aes(x = long, y = lat, group = group, fill = tax), data = relevantShapes.df, alpha = 0.6) +
               geom_polygon(aes(x = long, y = lat, group = group), data = relevantShapes.df, colour = "black", size = 0.3, alpha = 0) +
               scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes.df$tax))
+        
+        finalMap
 
   })
 
