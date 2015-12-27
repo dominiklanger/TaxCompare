@@ -67,16 +67,9 @@ img {
 </div>
 
 
-<div id="data-sources" class="section level2">
-<h2>Data sources</h2>
-<p>Shape file is taken from dataset <a href="http://www.cadastre.ch/internet/kataster/de/home/services/service/plz.html">Shape LV03</a>.</p>
-<pre class="r"><code>dataDirectory &lt;- &quot;../data/&quot;
-
-gisFile &lt;- paste0(dataDirectory, &quot;GIS_information_CH.txt&quot;)
-gisData &lt;- read.delim(gisFile, header=FALSE, fileEncoding = &quot;UTF-8&quot;) %&gt;%
-            select(V2, V8, V3, V5, V10, V11)
-names(gisData) &lt;- c(&quot;zip&quot;, &quot;municipality&quot;, &quot;municipality2&quot;, &quot;canton&quot;, &quot;latitude&quot;, &quot;longitude&quot;)</code></pre>
-<p><a href="http://www.steueramt.zh.ch/internet/finanzdirektion/ksta/de/steuerberechnung/steuertarife/_jcr_content/contentPar/downloadlist/downloaditems/steuertarife_2014_st.spooler.download.1440490483459.pdf/Steuertarife_2014_Staatssteuer_Bundessteuer.pdf">Tax scales canton of Zurich (2014)</a></p>
+<div id="tax-scales" class="section level2">
+<h2>Tax scales</h2>
+<p>Tax scales for the Canton of Zurich (year: 2014) have been obtained from the canton’s tax department: <a href="http://www.steueramt.zh.ch/internet/finanzdirektion/ksta/de/steuerberechnung/steuertarife/_jcr_content/contentPar/downloadlist/downloaditems/steuertarife_2014_st.spooler.download.1440490483459.pdf/Steuertarife_2014_Staatssteuer_Bundessteuer.pdf">data</a></p>
 <pre class="r"><code>taxScaleFilePaths &lt;- c(
       &quot;taxScales_state_income_GT_zh_2014.csv&quot;,
       &quot;taxScales_state_income_VT_zh_2014.csv&quot;,
@@ -127,6 +120,15 @@ for (i in seq_along(taxScaleFilePaths)) {
 
 taxScaleTargetFilePath &lt;- paste0(dataDirectory, &quot;taxScales_cleaned.csv&quot;)
 write.csv(taxScales, taxScaleTargetFilePath)</code></pre>
+</div>
+<div id="tax-multipliers" class="section level2">
+<h2>Tax multipliers</h2>
+<p>Shape file with geographical shapes of Swiss municipalities have been taken from dataset <a href="http://www.cadastre.ch/internet/kataster/de/home/services/service/plz.html">Shape LV03</a>.</p>
+<pre class="r"><code>gisFile &lt;- paste0(dataDirectory, &quot;GIS_information_CH.txt&quot;)
+gisData &lt;- read.delim(gisFile, header=FALSE, fileEncoding = &quot;UTF-8&quot;) %&gt;%
+            select(V2, V8, V3, V5, V10, V11)
+names(gisData) &lt;- c(&quot;zip&quot;, &quot;municipality&quot;, &quot;municipality2&quot;, &quot;canton&quot;, &quot;latitude&quot;, &quot;longitude&quot;)</code></pre>
+<p>Tax multipliers for municipalities in the Canton of Zurich have been obtained from the canton’s Statistical Department: <a href="http://www.statistik.zh.ch/internet/justiz_inneres/statistik/de/daten/daten_oeffentliche_finanzen/gemeindesteuern/_jcr_content/contentPar/downloadlist_1/downloaditems/100_1404204330782.spooler.download.1363264483248.xls/STFUESSE.XLS">data</a></p>
 <pre class="r"><code>multiplierFilePath &lt;- paste0(dataDirectory, &quot;steuerfuesse_zh.xlsx&quot;)
 
 taxMultipliers &lt;- read.xlsx(multiplierFilePath, 
@@ -161,6 +163,9 @@ taxMultipliers$zip &lt;- lapply(1:nrow(taxMultipliers),
                                     plzs
                              }
                         ) </code></pre>
+</div>
+<div id="function-to-calculate-tax-amount" class="section level2">
+<h2>Function to calculate tax amount</h2>
 <pre class="r"><code>calculateTax &lt;- function(zipCodes, amount, taxType, taxCategory, scales, multipliers) {
       selectedYear = 2014
 
@@ -198,7 +203,16 @@ taxMultipliers$zip &lt;- lapply(1:nrow(taxMultipliers),
              }
       )
 }</code></pre>
-<pre class="r"><code>income = 200000
+</div>
+<div id="overlay-of-tax-data-on-top-of-google-maps" class="section level2">
+<h2>Overlay of tax data on top of google maps</h2>
+<p>The following pages were helpful when figuring out to put overlays on GoogleMap plots:</p>
+<ul>
+<li><a href="http://spatioanalytics.com/2013/07/12/throw-some-throw-some-stats-on-that-map-part-1/">Throw some, throw some STATS on that map…(Part 1)</a></li>
+<li><a href="http://spatioanalytics.com/2014/02/20/shapefile-polygons-plotted-on-google-maps-using-ggplot-throw-some-throw-some-stats-on-that-mappart-2/">Shapefile Polygons Plotted on Google Maps Using ggmap in R – Throw some, throw some STATS on that map…(Part 2)</a></li>
+</ul>
+<pre class="r"><code># Let's use some test data:
+income = 200000
 wealth = 300000
 category = &quot;VT&quot;
 
@@ -223,8 +237,6 @@ relevantShapes.df &lt;- inner_join(relevantShapes.df, relevantShapes@data, by=&q
 
 
 # Plot with ggplot
-#http://spatioanalytics.com/2013/07/12/throw-some-throw-some-stats-on-that-map-part-1/
-#http://spatioanalytics.com/2014/02/20/shapefile-polygons-plotted-on-google-maps-using-ggplot-throw-some-throw-some-stats-on-that-mappart-2/
 centerOfMap &lt;- geocode(&quot;47.436734,8.6513793&quot;, source = &quot;google&quot;)
 googleMap &lt;- get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = &quot;terrain&quot;, source = &quot;google&quot;)
 

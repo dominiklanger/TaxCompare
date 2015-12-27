@@ -5,7 +5,7 @@ date: "Saturday, December 26, 2015"
 output: html_document
 ---
 
-```{r loadPackages, echo=FALSE, message=FALSE, warning=FALSE}
+```{r prepareStage, echo=FALSE, message=FALSE, warning=FALSE}
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -21,21 +21,14 @@ library(jsonlite)
 library(lubridate)
 library(rgdal)
 library(rgeos)
-```
-## Data sources
 
-Shape file is taken from dataset [Shape LV03](http://www.cadastre.ch/internet/kataster/de/home/services/service/plz.html).
-
-```{r loadGISData, message=FALSE, warning=FALSE}
 dataDirectory <- "../data/"
 
-gisFile <- paste0(dataDirectory, "GIS_information_CH.txt")
-gisData <- read.delim(gisFile, header=FALSE, fileEncoding = "UTF-8") %>%
-            select(V2, V8, V3, V5, V10, V11)
-names(gisData) <- c("zip", "municipality", "municipality2", "canton", "latitude", "longitude")
 ```
 
-[Tax scales canton of Zurich (2014)](http://www.steueramt.zh.ch/internet/finanzdirektion/ksta/de/steuerberechnung/steuertarife/_jcr_content/contentPar/downloadlist/downloaditems/steuertarife_2014_st.spooler.download.1440490483459.pdf/Steuertarife_2014_Staatssteuer_Bundessteuer.pdf)
+## Tax scales
+
+Tax scales for the Canton of Zurich (year: 2014) have been obtained from the canton's tax department: [data](http://www.steueramt.zh.ch/internet/finanzdirektion/ksta/de/steuerberechnung/steuertarife/_jcr_content/contentPar/downloadlist/downloaditems/steuertarife_2014_st.spooler.download.1440490483459.pdf/Steuertarife_2014_Staatssteuer_Bundessteuer.pdf)
 
 ```{r loadTaxScales, message=FALSE, warning=FALSE}
 
@@ -91,6 +84,18 @@ taxScaleTargetFilePath <- paste0(dataDirectory, "taxScales_cleaned.csv")
 write.csv(taxScales, taxScaleTargetFilePath)
 ```
 
+## Tax multipliers 
+
+Shape file with geographical shapes of Swiss municipalities have been taken from dataset [Shape LV03](http://www.cadastre.ch/internet/kataster/de/home/services/service/plz.html).
+
+```{r loadGISData, message=FALSE, warning=FALSE}
+gisFile <- paste0(dataDirectory, "GIS_information_CH.txt")
+gisData <- read.delim(gisFile, header=FALSE, fileEncoding = "UTF-8") %>%
+            select(V2, V8, V3, V5, V10, V11)
+names(gisData) <- c("zip", "municipality", "municipality2", "canton", "latitude", "longitude")
+```
+
+Tax multipliers for municipalities in the Canton of Zurich have been obtained from the canton's Statistical Department: [data](http://www.statistik.zh.ch/internet/justiz_inneres/statistik/de/daten/daten_oeffentliche_finanzen/gemeindesteuern/_jcr_content/contentPar/downloadlist_1/downloaditems/100_1404204330782.spooler.download.1363264483248.xls/STFUESSE.XLS)
 
 ```{r loadTaxMultipliers, message=FALSE, warning=FALSE}
 
@@ -130,7 +135,7 @@ taxMultipliers$zip <- lapply(1:nrow(taxMultipliers),
                         ) 
 ```
 
-
+## Function to calculate tax amount
 
 ```{r calculateTaxFunction, message=FALSE, warning=FALSE}
 
@@ -174,8 +179,15 @@ calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipl
 
 ```
 
-```{r createPlot, message=FALSE, warning=FALSE}
+## Overlay of tax data on top of google maps
 
+The following pages were helpful when figuring out to put overlays on GoogleMap plots: 
+
+* [Throw some, throw some STATS on that map…(Part 1)](http://spatioanalytics.com/2013/07/12/throw-some-throw-some-stats-on-that-map-part-1/)
+* [Shapefile Polygons Plotted on Google Maps Using ggmap in R – Throw some, throw some STATS on that map…(Part 2)](http://spatioanalytics.com/2014/02/20/shapefile-polygons-plotted-on-google-maps-using-ggplot-throw-some-throw-some-stats-on-that-mappart-2/)
+
+```{r createPlot, message=FALSE, warning=FALSE}
+# Let's use some test data:
 income = 200000
 wealth = 300000
 category = "VT"
@@ -197,8 +209,6 @@ relevantShapes.df <- inner_join(relevantShapes.df, relevantShapes@data, by="id")
 
 
 # Plot with ggplot
-#http://spatioanalytics.com/2013/07/12/throw-some-throw-some-stats-on-that-map-part-1/
-#http://spatioanalytics.com/2014/02/20/shapefile-polygons-plotted-on-google-maps-using-ggplot-throw-some-throw-some-stats-on-that-mappart-2/
 centerOfMap <- geocode("47.436734,8.6513793", source = "google")
 googleMap <- get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = "terrain", source = "google")
 
