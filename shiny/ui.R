@@ -11,6 +11,8 @@ shinyUI(
             # Application title
             titlePanel("Comparison of municipality tax in the Canton of Zurich, Switzerland"),
             
+            p(HTML("This app plots the height of municipality tax for the different municipalities in the canton of Zurich.")),            
+            
             # Sidebar with a slider input for number of bins
             sidebarLayout(                  
                   sidebarPanel(
@@ -29,7 +31,8 @@ shinyUI(
                               label = "Tax category",
                               choices = c("Single", "Married or single parent"),
                               selected = "Single"
-                        )
+                        ),
+                        helpText("Calculating the plot may take a couple of seconds. Please be patient.")
                   ),
                   # Show a plot of the tax height for each municipality:
                   mainPanel(

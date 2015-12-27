@@ -78,7 +78,15 @@ shinyServer(function(input, output) {
         finalMap <- ggmap(googleMap) + 
               geom_polygon(aes(x = long, y = lat, group = group, fill = tax), data = relevantShapes.df, alpha = 0.6) +
               geom_polygon(aes(x = long, y = lat, group = group), data = relevantShapes.df, colour = "black", size = 0.3, alpha = 0) +
-              scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes.df$tax))
+              scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes.df$tax)) +
+              theme(
+                    axis.title.x = element_blank(),
+                    axis.title.y = element_blank(),
+                    axis.text.x = element_blank(),
+                    axis.text.y = element_blank(),
+                    axis.ticks = element_blank()
+              ) +
+              labs(fill = "Tax in CHF")
         
         finalMap
 
