@@ -67,8 +67,8 @@ shinyServer(function(input, output) {
         
         # Calculate tax for each zip code:
         incomeTax <- calculateTax(relevantShapes$PLZ, input$income, "income", taxCategory, taxScales, taxMultipliers, gisData)
-        wealthTax <- calculateTax(relevantShapes$PLZ, input$wealth, "wealth", taxCategory, taxScales, taxMultipliers, gisData)        
-        relevantShapes$tax <- incomeTax + wealthTax
+        propertyTax <- calculateTax(relevantShapes$PLZ, input$property, "property", taxCategory, taxScales, taxMultipliers, gisData)        
+        relevantShapes$tax <- incomeTax + propertyTax
         
         # To allow joining of shape data and tax data, we need row IDs in the shape data:
         relevantShapes@data$id <- rownames(relevantShapes@data)

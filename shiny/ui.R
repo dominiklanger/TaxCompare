@@ -9,20 +9,24 @@ library(shiny)
 shinyUI(
       fluidPage(            
             # Application title
-            titlePanel("Comparison of municipality tax in the Canton of Zurich, Switzerland"),
+            titlePanel("Comparison of municipality tax in the Canton of Zürich"),
             
-            p(HTML("This app plots the height of municipality tax for the different municipalities in the canton of Zurich.")),            
+            p(HTML(paste0("This app plots the height of municipality tax for the municipalities in the ", 
+                         a("Canton of Zürich", href="https://en.wikipedia.org/wiki/Canton_of_Z%C3%BCrich", target="_blank"),
+                         ", Switzerland."
+                        )
+            )),    
             
             # Sidebar with a slider input for number of bins
             sidebarLayout(                  
                   sidebarPanel(
-                        helpText("Please enter your taxable income and wealth in Swiss Francs (CHF) and select your tax category."),
+                        helpText("Please enter your taxable income and property in Swiss Francs (CHF) and select your tax category."),
                         numericInput("income", "Taxable income in CHF:", 
                               value = 100000,
                               min = 0, 
                               max = 10000000
                         ),
-                        numericInput("wealth", "Taxable wealth in CHF:", 
+                        numericInput("property", "Taxable property in CHF:", 
                               value = 300000,
                               min = 0, 
                               max = 100000000

@@ -3,7 +3,7 @@
 ## Created at: 2015-12-27
 ## Project: TaxCompare
 ## Description: Function that calculates the tax applicable in different municipalities (specified by
-## zip code) for a given income, wealth and tax category
+## zip code) for a given income, property and tax category
 
 calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipliers, zipsCantons) {
       selectedYear = 2014 # For the moment, let's stick with data for 2014

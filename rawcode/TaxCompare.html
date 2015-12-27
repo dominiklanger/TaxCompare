@@ -73,8 +73,8 @@ img {
 <pre class="r"><code>taxScaleFilePaths &lt;- c(
       &quot;taxScales_state_income_GT_zh_2014.csv&quot;,
       &quot;taxScales_state_income_VT_zh_2014.csv&quot;,
-      &quot;taxScales_state_wealth_GT_zh_2014.csv&quot;,
-      &quot;taxScales_state_wealth_VT_zh_2014.csv&quot;,
+      &quot;taxScales_state_property_GT_zh_2014.csv&quot;,
+      &quot;taxScales_state_property_VT_zh_2014.csv&quot;,
       &quot;taxScales_federal_income_GT_zh_2014.csv&quot;,
       &quot;taxScales_federal_income_VT_zh_2014.csv&quot;
 )
@@ -213,7 +213,7 @@ taxMultipliers$zip &lt;- lapply(1:nrow(taxMultipliers),
 </ul>
 <pre class="r"><code># Let's use some test data:
 income = 200000
-wealth = 300000
+property = 300000
 category = &quot;VT&quot;
 
 shapeDirectory &lt;- paste0(dataDirectory, &quot;PLZO_SHP_LV03&quot;)
@@ -225,8 +225,8 @@ shapesSwitzerland &lt;- readOGR(shapeDirectory, layer = &quot;PLZO_PLZ&quot;)</c
 <pre class="r"><code>relevantShapes &lt;- shapesSwitzerland[shapesSwitzerland$PLZ %in% unlist(taxMultipliers$zip),]
 relevantShapes &lt;- spTransform(relevantShapes, CRS(&quot;+proj=longlat +datum=WGS84&quot;))
 incomeTax &lt;- calculateTax(relevantShapes$PLZ, income, &quot;income&quot;, category, taxScales, taxMultipliers)
-wealthTax &lt;- calculateTax(relevantShapes$PLZ, wealth, &quot;wealth&quot;, category, taxScales, taxMultipliers)
-relevantShapes$tax &lt;- incomeTax + wealthTax
+propertyTax &lt;- calculateTax(relevantShapes$PLZ, property, &quot;property&quot;, category, taxScales, taxMultipliers)
+relevantShapes$tax &lt;- incomeTax + propertyTax
 relevantShapes@data$id &lt;- rownames(relevantShapes@data)
 
 # Convert to dataframe for plotting with ggplot - takes a while

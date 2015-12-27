@@ -34,8 +34,8 @@ Tax scales for the Canton of Zurich (year: 2014) have been obtained from the can
 taxScaleFilePaths <- c(
       "taxScales_state_income_GT_zh_2014.csv",
       "taxScales_state_income_VT_zh_2014.csv",
-      "taxScales_state_wealth_GT_zh_2014.csv",
-      "taxScales_state_wealth_VT_zh_2014.csv",
+      "taxScales_state_property_GT_zh_2014.csv",
+      "taxScales_state_property_VT_zh_2014.csv",
       "taxScales_federal_income_GT_zh_2014.csv",
       "taxScales_federal_income_VT_zh_2014.csv"
 )
@@ -188,7 +188,7 @@ The following pages were helpful when figuring out to put overlays on GoogleMap 
 ```{r createPlot, message=FALSE, warning=FALSE}
 # Let's use some test data:
 income = 200000
-wealth = 300000
+property = 300000
 category = "VT"
 
 shapeDirectory <- paste0(dataDirectory, "PLZO_SHP_LV03")
@@ -196,8 +196,8 @@ shapesSwitzerland <- readOGR(shapeDirectory, layer = "PLZO_PLZ")
 relevantShapes <- shapesSwitzerland[shapesSwitzerland$PLZ %in% unlist(taxMultipliers$zip),]
 relevantShapes <- spTransform(relevantShapes, CRS("+proj=longlat +datum=WGS84"))
 incomeTax <- calculateTax(relevantShapes$PLZ, income, "income", category, taxScales, taxMultipliers)
-wealthTax <- calculateTax(relevantShapes$PLZ, wealth, "wealth", category, taxScales, taxMultipliers)
-relevantShapes$tax <- incomeTax + wealthTax
+propertyTax <- calculateTax(relevantShapes$PLZ, property, "property", category, taxScales, taxMultipliers)
+relevantShapes$tax <- incomeTax + propertyTax
 relevantShapes@data$id <- rownames(relevantShapes@data)
 
 # Convert to dataframe for plotting with ggplot - takes a while
