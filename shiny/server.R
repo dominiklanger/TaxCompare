@@ -4,6 +4,14 @@
 ## Project: TaxCompare
 ## Description: Server part of a Shiny app calculating and plotting taxes for different municipalities.
 
+# Deployment instructions for uploading to Shinyapps.io:
+# 1. Set working directory to this file's directory (using the setwd command).
+# 2. Load the shinyapps package (library(shinyapps)). If the shinyapps package is not yet installed, install it with: devtools::install_github('rstudio/shinyapps'))
+# 3. Set the credentials (copy code snippet from the "Tokens" menu when logged in to shinyapps.io).
+# 4. Execute the deployApp() command.
+
+
+
 # Load packages:
 library(shiny)
 
@@ -27,7 +35,7 @@ source("loadAndPrepareTaxMultipliers.R")
 source("calculateTax.R")
 
 # Set paths for data files:
-dataDirectory <- "../data/"
+dataDirectory <- "./data/"
 taxScaleFilePath <- paste0(dataDirectory, "taxScales_cleaned.csv")
 multiplierFilePath <- paste0(dataDirectory, "steuerfuesse_zh.xlsx")
 gisFile <- paste0(dataDirectory, "GIS_information_CH.txt")
