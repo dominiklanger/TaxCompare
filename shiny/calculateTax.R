@@ -1,9 +1,14 @@
-
-
+## File: calculateTax.R
+## Author: Dominik Langer
+## Created at: 2015-12-27
+## Project: TaxCompare
+## Description: Function that calculates the tax applicable in different municipalities (specified by
+## zip code) for a given income, wealth and tax category
 
 calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipliers, zipsCantons) {
-      selectedYear = 2014
+      selectedYear = 2014 # For the moment, let's stick with data for 2014
       
+      # Calculate and return applicable tax for each provided zip code:
       sapply(zipCodes, 
              function(zipCode) {
                    # Look-up canton from GIS file for filtering below
@@ -18,6 +23,8 @@ calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipl
                                                   canton == canton & 
                                                   category == taxCategory
                    )
+                   
+                   # Determine the base tax
                    baseTax <- 0
                    for(i in 1:nrow(relevantScales)) {
                          if (amount >= relevantScales$threshold[i]) {
@@ -26,6 +33,7 @@ calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipl
                          }
                    }
                    
+                   # Find the multiplier to be applied:
                    multiplier <- 0
                    for(i in 1:nrow(multipliers)) {
                          if (zipCode %in% multipliers$zip[[i]]) {
@@ -34,7 +42,8 @@ calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipl
                          } 
                    } 
                    
-                   (multiplier) * baseTax
+                   # Calculate the municipality tax:
+                   return ((multiplier) * baseTax)
              }
       )
 }

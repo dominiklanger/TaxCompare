@@ -1,10 +1,15 @@
+## File: ui.R
+## Author: Dominik Langer
+## Created at: 2015-12-27
+## Project: TaxCompare
+## Description: UI part of a Shiny app calculating and plotting taxes for different municipalities.
 
 library(shiny)
 
 shinyUI(
       fluidPage(            
             # Application title
-            titlePanel("Tax comparison of municipalities in the Canton of Zurich, Switzerland"),
+            titlePanel("Comparison of municipality tax in the Canton of Zurich, Switzerland"),
             
             # Sidebar with a slider input for number of bins
             sidebarLayout(                  

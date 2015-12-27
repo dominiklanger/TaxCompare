@@ -1,4 +1,10 @@
+## File: server.R
+## Author: Dominik Langer
+## Created at: 2015-12-27
+## Project: TaxCompare
+## Description: Server part of a Shiny app calculating and plotting taxes for different municipalities.
 
+# Load packages:
 library(shiny)
 
 library(knitr) # for Knitr
@@ -16,15 +22,18 @@ library(RgoogleMaps)
 library(rgdal)
 library(rgeos)
 
+# Load functions:
 source("loadAndPrepareTaxMultipliers.R")
 source("calculateTax.R")
 
+# Set paths for data files:
 dataDirectory <- "../data/"
 taxScaleFilePath <- paste0(dataDirectory, "taxScales_cleaned.csv")
 multiplierFilePath <- paste0(dataDirectory, "steuerfuesse_zh.xlsx")
 gisFile <- paste0(dataDirectory, "GIS_information_CH.txt")
 shapeDirectory <- paste0(dataDirectory, "PLZO_SHP_LV03")
 
+# Load and prepare data:
 taxScales <- read.csv(taxScaleFilePath)
 
 gisData <- read.delim(gisFile, header=FALSE, fileEncoding = "UTF-8") %>%
@@ -38,6 +47,7 @@ relevantShapes <- shapesSwitzerland[shapesSwitzerland$PLZ %in% unlist(taxMultipl
 relevantShapes <- spTransform(relevantShapes, CRS("+proj=longlat +datum=WGS84"))
 
 
+# Actual shiny server functionality:
 shinyServer(function(input, output) {
 
   output$taxMap <- renderPlot({
