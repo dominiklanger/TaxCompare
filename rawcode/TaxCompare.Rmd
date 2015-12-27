@@ -1,0 +1,209 @@
+---
+title: "TaxCompare"
+author: "Dr. Dominik Langer"
+date: "Saturday, December 26, 2015"
+output: html_document
+---
+
+```{r loadPackages, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(xlsx)
+library(reshape2)
+library(stringi)
+library(RgoogleMaps)
+library(sp)
+library(ggmap)
+library(scales)
+library(jsonlite)
+library(lubridate)
+library(rgdal)
+library(rgeos)
+```
+## Data sources
+
+Shape file is taken from dataset [Shape LV03](http://www.cadastre.ch/internet/kataster/de/home/services/service/plz.html).
+
+```{r loadGISData, message=FALSE, warning=FALSE}
+dataDirectory <- "../data/"
+
+gisFile <- paste0(dataDirectory, "GIS_information_CH.txt")
+gisData <- read.delim(gisFile, header=FALSE, fileEncoding = "UTF-8") %>%
+            select(V2, V8, V3, V5, V10, V11)
+names(gisData) <- c("zip", "municipality", "municipality2", "canton", "latitude", "longitude")
+```
+
+[Tax scales canton of Zurich (2014)](http://www.steueramt.zh.ch/internet/finanzdirektion/ksta/de/steuerberechnung/steuertarife/_jcr_content/contentPar/downloadlist/downloaditems/steuertarife_2014_st.spooler.download.1440490483459.pdf/Steuertarife_2014_Staatssteuer_Bundessteuer.pdf)
+
+```{r loadTaxScales, message=FALSE, warning=FALSE}
+
+taxScaleFilePaths <- c(
+      "taxScales_state_income_GT_zh_2014.csv",
+      "taxScales_state_income_VT_zh_2014.csv",
+      "taxScales_state_wealth_GT_zh_2014.csv",
+      "taxScales_state_wealth_VT_zh_2014.csv",
+      "taxScales_federal_income_GT_zh_2014.csv",
+      "taxScales_federal_income_VT_zh_2014.csv"
+)
+
+for (i in seq_along(taxScaleFilePaths)) {
+      if (grepl(".csv$", taxScaleFilePaths[i])) {
+            tempData <- read.csv(
+                  paste0(dataDirectory, taxScaleFilePaths[i]), 
+                  header = FALSE,
+                  stringsAsFactors = FALSE
+            )
+            
+            fileNameComponents <- strsplit(gsub(".csv", "", taxScaleFilePaths[i]), "_")[[1]]
+      
+            if (fileNameComponents[2] == "state") {
+                  tempData <- filter(tempData, !grepl("bis", V1)) %>%
+                        select(-V1, -V4, -V6, -V7) %>%
+                        rename(threshold = V2, baseTax = V3, slope = V5)
+                  tempData$canton <- toupper(fileNameComponents[5])
+            }
+            if (fileNameComponents[2] == "federal") {
+                  tempData <- select(tempData, -V4) %>% 
+                        rename(threshold = V1, baseTax = V2, slope = V3)    
+                  tempData$canton <- NA
+            }
+            
+            tempData$threshold <- as.numeric(gsub("’", "", tempData$threshold))
+            tempData$baseTax <- as.numeric(gsub("’", "", tempData$baseTax))
+            tempData$slope <- as.numeric(gsub(".–", "", tempData$slope)) / 100
+      
+            tempData$law <- fileNameComponents[2]
+            tempData$type <- fileNameComponents[3]
+            tempData$category <- toupper(fileNameComponents[4])
+            
+            tempData$year <- as.numeric(fileNameComponents[6])
+            
+            if (i == 1)
+                  taxScales <- tempData
+            else
+                  taxScales <- rbind(taxScales, tempData)
+      }                
+}
+
+taxScaleTargetFilePath <- paste0(dataDirectory, "taxScales_cleaned.csv")
+write.csv(taxScales, taxScaleTargetFilePath)
+```
+
+
+```{r loadTaxMultipliers, message=FALSE, warning=FALSE}
+
+multiplierFilePath <- paste0(dataDirectory, "steuerfuesse_zh.xlsx")
+
+taxMultipliers <- read.xlsx(multiplierFilePath, 
+                            sheetIndex = 4,
+                            colIndex = c(4, 18),
+                            header = FALSE,
+                            encoding = "UTF-8",
+                            startRow = 10,
+                            endRow = 178
+                            ) %>%
+                        rename(municipality = X4, multiplier = X18) %>%
+                        mutate(multiplier = multiplier / 100)
+taxMultipliers$canton <- "ZH"
+
+taxMultipliers$searchString <- sapply(strsplit(as.character(taxMultipliers$municipality), "\\."), function(x) {x[[1]][1]}) 
+
+taxMultipliers$zip <- lapply(1:nrow(taxMultipliers), 
+                             function(i) {
+                                    gisSubset <- gisData[gisData$canton == taxMultipliers$canton[i], 1:3]
+                                    searchString <- taxMultipliers$searchString[i]
+                                    plzs <- gisSubset$zip[which(grepl(searchString, gisSubset$municipality))]
+                                    if (length(plzs) == 0) {
+                                          searchString <- strsplit(taxMultipliers$searchString[i], " ")[[1]][1]                                          
+                                          plzs <- gisSubset$zip[which(grepl(searchString, gisSubset$municipality))]
+                                    }
+                                    if (length(plzs) == 0) {
+                                          plzs <- gisSubset$zip[which(grepl(searchString, gisSubset$municipality2))]                                          
+                                    }
+                                    if (length(plzs) == 0) {
+                                          print(paste("Couldn't find zip code for", taxMultipliers$municipality[i]))
+                                    }
+                                    plzs
+                             }
+                        ) 
+```
+
+
+
+```{r calculateTaxFunction, message=FALSE, warning=FALSE}
+
+calculateTax <- function(zipCodes, amount, taxType, taxCategory, scales, multipliers) {
+      selectedYear = 2014
+
+      sapply(zipCodes, 
+             function(zipCode) {
+                   # Look-up canton from GIS file for filtering below
+                   canton <- gisData$canton[gisData$zip == zipCode]
+                   canton <- canton[!duplicated(canton)]
+                   if (length(canton) > 1)
+                        canton <- canton[1]
+                   
+                   # Scales relevant for this canton:
+                   relevantScales <- filter(scales, year == selectedYear & 
+                                type == taxType & 
+                                canton == canton & 
+                                category == taxCategory
+                          )
+                   baseTax <- 0
+                   for(i in 1:nrow(relevantScales)) {
+                        if (amount >= relevantScales$threshold[i]) {
+                              baseTax <- relevantScales$baseTax[i] + 
+                                    (amount - relevantScales$threshold[i]) * relevantScales$slope[i]
+                        }
+                   }
+                   
+                   multiplier <- 0
+                   for(i in 1:nrow(multipliers)) {
+                       if (zipCode %in% multipliers$zip[[i]]) {
+                             multiplier <- multipliers$multiplier[i]
+                             break
+                       } 
+                   } 
+                   
+                   (multiplier + 1) * baseTax
+             }
+      )
+}
+
+```
+
+```{r createPlot, message=FALSE, warning=FALSE}
+
+income = 200000
+wealth = 300000
+category = "VT"
+
+shapeDirectory <- paste0(dataDirectory, "PLZO_SHP_LV03")
+shapesSwitzerland <- readOGR(shapeDirectory, layer = "PLZO_PLZ")
+relevantShapes <- shapesSwitzerland[shapesSwitzerland$PLZ %in% unlist(taxMultipliers$zip),]
+relevantShapes <- spTransform(relevantShapes, CRS("+proj=longlat +datum=WGS84"))
+incomeTax <- calculateTax(relevantShapes$PLZ, income, "income", category, taxScales, taxMultipliers)
+wealthTax <- calculateTax(relevantShapes$PLZ, wealth, "wealth", category, taxScales, taxMultipliers)
+relevantShapes$tax <- incomeTax + wealthTax
+relevantShapes@data$id <- rownames(relevantShapes@data)
+
+# Convert to dataframe for plotting with ggplot - takes a while
+relevantShapes.df <- fortify(relevantShapes)
+
+# Merge tax data into shape dataframe. Hint: http://stackoverflow.com/questions/19791210/r-ggplot2-merge-with-shapefile-and-csv-data-to-fill-polygons
+relevantShapes.df <- inner_join(relevantShapes.df, relevantShapes@data, by="id")
+
+
+# Plot with ggplot
+#http://spatioanalytics.com/2013/07/12/throw-some-throw-some-stats-on-that-map-part-1/
+#http://spatioanalytics.com/2014/02/20/shapefile-polygons-plotted-on-google-maps-using-ggplot-throw-some-throw-some-stats-on-that-mappart-2/
+centerOfMap <- geocode("47.436734,8.6513793", source = "google")
+googleMap <- get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = "terrain", source = "google")
+
+ggmap(googleMap) + 
+      geom_polygon(aes(x = long, y = lat, group = group, fill = tax), data = relevantShapes.df, alpha = 0.6) +
+      geom_polygon(aes(x = long, y = lat, group = group), data = relevantShapes.df, colour = "black", size = 0.3, alpha = 0) +
+      scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes.df$tax))
+```
