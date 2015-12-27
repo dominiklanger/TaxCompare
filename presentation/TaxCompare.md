@@ -1,37 +1,86 @@
-TaxCompare
+Municipality tax in the Canton of Zürich
 ========================================================
 author: Dr. Dominik Langer
 date: December 27, 2015
 
-First Slide
+Motivation
 ========================================================
 
-For more details on authoring R presentations click the
-**Help** button on the toolbar.
+Living in Switzerland is expensive. Some cost 
+factors such as [taxes](https://en.wikipedia.org/wiki/Taxation_in_Switzerland), 
+housing, health insurance and 
+commuting depend on the place of residence. 
 
-- Bullet 1
-- Bullet 2
-- Bullet 3
+An online tool combining these different factors and 
+displaying a "cost map" on top of a geographical
+map of Switzerland would be useful when choosing where
+to live.
 
-Slide With Code
+With my Shiny App, I took a first step towards this goal.
+For one of the 23 [cantons of Switzerland](http://www.bfs.admin.ch/bfs/portal/en/index/regionen/kantone.html), 
+the **Canton of Zürich**, 
+it maps the **municapality tax** as a function of the 
+user's income, net worth and tax category.
+
+Taxes in Switzerland (1/2)
 ========================================================
+
+*Federal tax* does not depend on the place of 
+residence. *State tax* differs between cantons and 
+*municipality tax* between municipalities. Let's make an 
+example for **state tax** in the Canton of Zürich:
 
 
 ```r
-summary(cars)
+income <- 100000 # in CHF
+netWorth <- 200000 # in CHF
+# For the above values, 2014 tax scales are:
+incomeTaxScale <- 6.296 / 100
+propertyTaxScale <- 0.371 / 1000
+# State tax hence amounts to:
+stateTax <- income * incomeTaxScale + netWorth * propertyTaxScale
+stateTax
 ```
 
 ```
-     speed           dist       
- Min.   : 4.0   Min.   :  2.00  
- 1st Qu.:12.0   1st Qu.: 26.00  
- Median :15.0   Median : 36.00  
- Mean   :15.4   Mean   : 42.98  
- 3rd Qu.:19.0   3rd Qu.: 56.00  
- Max.   :25.0   Max.   :120.00  
+[1] 6370.2
 ```
 
-Slide With Plot
+Taxes in Switzerland (2/2)
 ========================================================
 
-![plot of chunk unnamed-chunk-2](TaxCompare-figure/unnamed-chunk-2-1.png) 
+Each municipality decides on its tax multiplier based on 
+the costs it has to cover by the **municipality tax**. 
+Let's find out how much more tax our example citizen has 
+to pay in the *City of Zürich* than he would in the village 
+of *Aesch* (both are municipalities in the Canton of Zürich):
+
+
+```r
+taxMultiplier_Zurich <- 119 / 100
+taxMultiplier_Aesch <- 87 / 100
+municipalityTax_Zurich <- stateTax * taxMultiplier_Zurich
+municipalityTax_Aesch <- stateTax * taxMultiplier_Aesch
+# Tax difference in CHF:
+municipalityTax_Zurich - municipalityTax_Aesch 
+```
+
+```
+[1] 2038.464
+```
+
+Result and Outlook
+========================================================
+
+Check out my **[Shiny app](https://dlanger.shinyapps.io/TaxCompare)** 
+and experiment with different values
+of income, net worth (property) to explore the tax
+difference between different municipalities.
+
+As **next steps**, I plan to include the following improvements for the 
+app:
+
+1. Data and functionality for the remaining 22 cantons.
+2. Housing costs based on data from an online 
+platform publishing houses/appartments for rent/sale.
+3. Cost of commuting to the users place of work.
