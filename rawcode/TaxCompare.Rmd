@@ -6,19 +6,18 @@ output: html_document
 ---
 
 ```{r prepareStage, echo=FALSE, message=FALSE, warning=FALSE}
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(knitr)
-library(xlsx)
-library(reshape2)
-library(stringi)
-library(RgoogleMaps)
-library(sp)
+library(knitr) # for Knitr
+
+library(xlsx) # for loading Excel files
+
+library(dplyr) # for data manipulations
+
+# For plotting
+library(ggplot2) 
 library(ggmap)
-library(scales)
-library(jsonlite)
-library(lubridate)
+
+# For map manipulations:
+library(RgoogleMaps)
 library(rgdal)
 library(rgeos)
 
