@@ -54,50 +54,46 @@ shapesSwitzerland <- readOGR(shapeDirectory, layer = "PLZO_PLZ")
 relevantShapes <- shapesSwitzerland[shapesSwitzerland$PLZ %in% unlist(taxMultipliers$zip),]
 relevantShapes <- spTransform(relevantShapes, CRS("+proj=longlat +datum=WGS84"))
 
+# To allow joining of shape data and tax data, we need row IDs in the shape data:
+relevantShapes@data$id <- rownames(relevantShapes@data)
+
+# Convert to dataframe to enable plotting with ggplot:
+relevantShapes_df <- fortify(relevantShapes)
+
+# Fetch map from Google Maps:
+centerOfMap <- geocode("47.436734,8.6513793", source = "google")
+mapPlot <- ggmap(get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = "terrain", source = "google")) +
+      geom_polygon(aes(x = long, y = lat, group = group), data = relevantShapes_df, colour = "black", size = 0.3, alpha = 0) +
+      theme(
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            axis.text.x = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks = element_blank()
+      ) +
+      labs(fill = "Tax in CHF")
 
 # Actual shiny server functionality:
 shinyServer(function(input, output) {
 
   output$taxMap <- renderPlot({
         # Map names of tax categories to those used in the data files:
-        if (input$taxCategory == "Single")
-              taxCategory <- "GT"
-        else
-              taxCategory <- "VT"        
-        
+        if (input$taxCategory == "Single") taxCategory <- "GT" else taxCategory <- "VT"        
+
         # Calculate tax for each zip code:
         incomeTax <- calculateTax(relevantShapes$PLZ, input$income, "income", taxCategory, taxScales, taxMultipliers, gisData)
         propertyTax <- calculateTax(relevantShapes$PLZ, input$property, "property", taxCategory, taxScales, taxMultipliers, gisData)        
         relevantShapes$tax <- incomeTax + propertyTax
-        
-        # To allow joining of shape data and tax data, we need row IDs in the shape data:
-        relevantShapes@data$id <- rownames(relevantShapes@data)
-        
-        # Convert to dataframe for plotting with ggplot - takes a while
-        relevantShapes.df <- fortify(relevantShapes)
-        
+
         # Merge tax data into shape dataframe:
-        relevantShapes.df <- inner_join(relevantShapes.df, relevantShapes@data, by="id")
+        relevantShapes_df_withData <- inner_join(relevantShapes_df, relevantShapes@data, by="id")
         
-        # Plot with ggplot:
-        centerOfMap <- geocode("47.436734,8.6513793", source = "google")
-        googleMap <- get_map(c(lon=centerOfMap$lon, lat=centerOfMap$lat), zoom = 10, maptype = "terrain", source = "google")
-        
-        finalMap <- ggmap(googleMap) + 
-              geom_polygon(aes(x = long, y = lat, group = group, fill = tax), data = relevantShapes.df, alpha = 0.6) +
-              geom_polygon(aes(x = long, y = lat, group = group), data = relevantShapes.df, colour = "black", size = 0.3, alpha = 0) +
-              scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes.df$tax)) +
-              theme(
-                    axis.title.x = element_blank(),
-                    axis.title.y = element_blank(),
-                    axis.text.x = element_blank(),
-                    axis.text.y = element_blank(),
-                    axis.ticks = element_blank()
-              ) +
-              labs(fill = "Tax in CHF")
+        # Plot with ggplot:        
+        finalMap <- mapPlot + 
+              geom_polygon(aes(x = long, y = lat, group = group, fill = tax), data = relevantShapes_df_withData, alpha = 0.6) +              
+              scale_fill_gradient2(low = "gold", mid = "grey90", high = "red", midpoint = mean(relevantShapes_df_withData$tax))
         
         finalMap
-
   })
 
 })
